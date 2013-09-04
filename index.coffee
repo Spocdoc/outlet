@@ -1,5 +1,6 @@
 {argNames, makeId} = require 'lodash-fork'
-debugError = require('debug-fork') 'error'
+require 'debug-fork'
+debugError = global.debug 'error'
 errPending = {}
 
 module.exports = class Outlet
@@ -116,9 +117,9 @@ module.exports = class Outlet
 
   @prototype['modified'] = @prototype.modified = ->
     if @pending
-      @version = makeIndex()
+      @version = makeId()
     else
-      @set @value, makeIndex()
+      @set @value, makeId()
     @value
 
   get: ->
