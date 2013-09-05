@@ -8,7 +8,7 @@ module.exports = class Outlet
 
   constructor: (value, @context, auto) ->
     @auto = if auto then this else null
-    @index = makeId()
+    @id = makeId()
 
     @equivalents = {}
     (@changing = {}).length = 0
@@ -36,7 +36,7 @@ module.exports = class Outlet
       roots.length = 0
     return
 
-  toString: -> @index
+  toString: -> @id
 
   'toOJSON': ->
     if @value? then @value else null
@@ -80,9 +80,9 @@ module.exports = class Outlet
       @version = version
 
       if immediate
-        outflow._runSource this for index, outflow of @outflows
+        outflow._runSource this for id, outflow of @outflows
       else
-        for index, outflow of @outflows
+        for id, outflow of @outflows
           if outflow.changing[this]
             delete outflow.changing[this]
             --outflow.changing.length
@@ -91,7 +91,7 @@ module.exports = class Outlet
             Outlet.roots.push outflow
             outflow._setPendingTrue()
 
-    equiv._setFA value, version, this, immediate for index, equiv of @equivalents when equiv isnt except
+    equiv._setFA value, version, this, immediate for id, equiv of @equivalents when equiv isnt except
 
     return
 
@@ -158,8 +158,8 @@ module.exports = class Outlet
   @prototype['unset'] = @prototype.unset = (outlet) ->
     Outlet.openBlock()
     unless outlet
-      for index, outlet of @equivalents
-        delete @equivalents[index]
+      for id, outlet of @equivalents
+        delete @equivalents[id]
         delete outlet.equivalents[this]
         outlet._setPendingFalse() unless outlet._shouldPend {}
 
@@ -177,8 +177,8 @@ module.exports = class Outlet
     return
 
   @prototype['clear'] = @prototype.clear = ->
-    for index, outlet of @equivalents
-      delete @equivalents[index]
+    for id, outlet of @equivalents
+      delete @equivalents[id]
       delete outlet.equivalents[this]
       outlet._setPendingFalse() unless outlet._shouldPend {}
     @set()
@@ -187,7 +187,7 @@ module.exports = class Outlet
   _shouldPend: (visited) ->
     return true if @changing.length or @root
     visited[this] = 1
-    for index, outlet of @equivalents when !visited[index] and outlet._shouldPend(visited)
+    for id, outlet of @equivalents when !visited[id] and outlet._shouldPend(visited)
       return true
     false
 
@@ -196,8 +196,8 @@ module.exports = class Outlet
     unless @pending
       @pending = true
       except = @funcOutlet if @changing.length or @root
-      equiv._setPendingTrue() for index, equiv of @equivalents when equiv isnt except
-      outflow._setPendingTrue(this) for index, outflow of @outflows
+      equiv._setPendingTrue() for id, equiv of @equivalents when equiv isnt except
+      outflow._setPendingTrue(this) for id, outflow of @outflows
     return
 
   _setPendingFalse: (source) ->
@@ -215,13 +215,13 @@ module.exports = class Outlet
     else unless @funcOutlet?.pending and @funcOutlet._shouldPend {}
       @pending = false
 
-      for index, equiv of @equivalents
+      for id, equiv of @equivalents
         if equiv.value is @value and equiv.version is @version
           equiv._setPendingFalse()
         else
           equiv._setFA @value, @version, this, true
 
-      outflow._setPendingFalse(this) for index, outflow of @outflows
+      outflow._setPendingFalse(this) for id, outflow of @outflows
 
     return
 
@@ -240,12 +240,12 @@ module.exports = class Outlet
 
     prev = Outlet.auto; Outlet.auto = @auto
     try
-      @_autoInflows[index] = 0 for index of @_autoInflows
+      @_autoInflows[id] = 0 for id of @_autoInflows
       value = @_runFunc()
-      for index,used of @_autoInflows when !used
-        delete @_autoInflows[index]
-        delete @autoInflows[index].outflows[this]
-        delete @autoInflows[index]
+      for id,used of @_autoInflows when !used
+        delete @_autoInflows[id]
+        delete @autoInflows[id].outflows[this]
+        delete @autoInflows[id]
     catch _error
       return if _error is errPending
       debugError "#{_error.name}: #{_error.message}\n #{_error.stack}" if _error
