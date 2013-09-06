@@ -31,7 +31,7 @@ module.exports = class Outlet
   @closeBlock = ->
     unless --(roots = Outlet.roots).depth
       ++roots.depth
-      `for (var i = 0, len = 0; (i < len) || (i < (len = roots.length)); ++i) roots[i]._runSource();`
+      `for (var i = 0, len = 0; (i < len) || (i < (len = roots.length)); ++i) { roots[i].root = false; roots[i]._runSource(); }`
       --roots.depth
       roots.length = 0
     return
@@ -231,12 +231,14 @@ module.exports = class Outlet
         delete @changing[source]
         --@changing.length
       return if @root
-    else if @changing.length
-      Outlet.roots.push this
+
+    if @changing.length
+      unless @root
+        Outlet.roots.push this
+        @root = true
       return
 
-    @root = false
-    return unless @pending and !@changing.length
+    return unless @pending
 
     prev = Outlet.auto; Outlet.auto = @auto
     try
