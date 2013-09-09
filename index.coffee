@@ -176,14 +176,6 @@ module.exports = class Outlet
     Outlet.closeBlock()
     return
 
-  @prototype['clear'] = @prototype.clear = ->
-    for id, outlet of @equivalents
-      delete @equivalents[id]
-      delete outlet.equivalents[this]
-      outlet._setPendingFalse() unless outlet._shouldPend {}
-    @set()
-    return
-
   _shouldPend: (visited) ->
     return true if @changing.length or @root
     visited[this] = 1
