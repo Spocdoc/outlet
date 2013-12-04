@@ -218,6 +218,9 @@ module.exports = class Outlet
       version = @['_fE']; delete @['_fE']
       @_setFA value, version, source, true
 
+    else if @funcOutlet and !@funcOutlet.pending and (@funcOutlet.value isnt @value or @funcOutlet.version isnt @version)
+      @_setFA @funcOutlet.value, @funcOutlet.version
+
     else unless @funcOutlet?.pending and @funcOutlet._shouldPend {}
       @pending = false
 
