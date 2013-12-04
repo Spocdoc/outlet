@@ -122,6 +122,20 @@ module.exports = class Outlet
       @set @value, makeId()
     @value
 
+  push: (value) ->
+    if @value and @value.push
+      @value.push value
+      @modified()
+    else
+      @set [value]
+    return
+
+  pop: ->
+    return unless @value and @value.pop and @value.length > 0
+    ret = @value.pop()
+    @modified()
+    ret
+
   get: ->
     if (out = Outlet.auto) and this != out
       a = out._autoInflows ||= {}
