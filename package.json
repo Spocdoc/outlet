@@ -10,9 +10,8 @@
     "author": "",
     "private": true,
     "dependencies": {
-    },
-    "DEBUG local dependencies": {
       "debug-fork": "0.x",
+      "ojson": "0.x",
       "lodash-fork": "0.x"
     }
 }

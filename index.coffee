@@ -1,7 +1,14 @@
 {argNames, makeId} = require 'lodash-fork'
 require 'debug-fork'
 debugError = global.debug 'error'
+OJSON = require 'ojson'
 errPending = {}
+
+sameValue = (a, b) ->
+  return true if a is b
+  return false if !a? or (ta = typeof a) isnt typeof b or ta isnt 'object' or !Array.isArray(a) or !Array.isArray(b) or (len = a.length) isnt b.length
+  `for (var i = 0; i < len; ++i) { if (a[i] !== b[i]) return false; }`
+  true
 
 module.exports = class Outlet
   (@roots = []).depth = 0
@@ -17,12 +24,14 @@ module.exports = class Outlet
     @set value
 
   @block = (fn) ->
-    ->
+    ret = ->
       Outlet.openBlock()
       try
         fn.apply this, arguments
       finally
         Outlet.closeBlock()
+    ret.inblock = true
+    ret
 
   @openBlock = ->
     ++Outlet.roots.depth
@@ -39,17 +48,19 @@ module.exports = class Outlet
   toString: -> @id
 
   'toOJSON': ->
-    if @value? then @value else null
+    if @value? then OJSON.toOJSON(@value) else null
 
   set: (value, version) ->
     Outlet.openBlock()
-    if typeof value is 'function'
-      @_setFunc value, version
-    else if value instanceof Outlet
-      @_setOutlet value
-    else
-      @_setFA value, version
-    Outlet.closeBlock()
+    try
+      if typeof value is 'function'
+        @_setFunc value, version
+      else if value instanceof Outlet
+        @_setOutlet value
+      else
+        @_setFA value, version
+    finally
+      Outlet.closeBlock()
     return
 
   initProxy: (func, context) ->
@@ -71,7 +82,7 @@ module.exports = class Outlet
 
     else
 
-      if @value is value and @version is version
+      if @version is version and sameValue(@value, value)
         return @_setPendingFalse()
 
       @pending = false
@@ -171,23 +182,25 @@ module.exports = class Outlet
 
   @prototype['unset'] = @prototype.unset = (outlet) ->
     Outlet.openBlock()
-    unless outlet
-      for id, outlet of @equivalents
-        delete @equivalents[id]
-        delete outlet.equivalents[this]
-        outlet._setPendingFalse() unless outlet._shouldPend {}
+    try
+      unless outlet
+        for id, outlet of @equivalents
+          delete @equivalents[id]
+          delete outlet.equivalents[this]
+          outlet._setPendingFalse() unless outlet._shouldPend {}
 
-      @_setPendingFalse() unless @_shouldPend {}
-    else
-      return unless @equivalents[outlet]
-      delete @equivalents[outlet]
-      delete outlet.equivalents[this]
-      if @pending
-        unless outlet._shouldPend({})
-          outlet._setPendingFalse()
-        else unless @_shouldPend({})
-          @_setPendingFalse()
-    Outlet.closeBlock()
+        @_setPendingFalse() unless @_shouldPend {}
+      else
+        return unless @equivalents[outlet]
+        delete @equivalents[outlet]
+        delete outlet.equivalents[this]
+        if @pending
+          unless outlet._shouldPend({})
+            outlet._setPendingFalse()
+          else unless @_shouldPend({})
+            @_setPendingFalse()
+    finally
+      Outlet.closeBlock()
     return
 
   _shouldPend: (visited) ->
@@ -218,14 +231,14 @@ module.exports = class Outlet
       version = @['_fE']; delete @['_fE']
       @_setFA value, version, source, true
 
-    else if @funcOutlet and !@funcOutlet.pending and (@funcOutlet.value isnt @value or @funcOutlet.version isnt @version)
+    else if @funcOutlet and !@funcOutlet.pending and (@funcOutlet.version isnt @version or !sameValue(@funcOutlet.value,@value))
       @_setFA @funcOutlet.value, @funcOutlet.version
 
     else unless @funcOutlet?.pending and @funcOutlet._shouldPend {}
       @pending = false
 
       for id, equiv of @equivalents
-        if equiv.value is @value and equiv.version is @version
+        if equiv.version is @version and sameValue(equiv.value,@value)
           equiv._setPendingFalse()
         else
           equiv._setFA @value, @version, this, true
