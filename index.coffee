@@ -12,6 +12,7 @@ sameValue = (a, b) ->
 
 module.exports = class Outlet
   (@roots = []).depth = 0
+  @tails = []
 
   constructor: (value, @context, auto) ->
     @auto = if auto then this else null
@@ -40,9 +41,28 @@ module.exports = class Outlet
   @closeBlock = ->
     unless --(roots = Outlet.roots).depth
       ++roots.depth
-      `for (var i = 0, len = 0; (i < len) || (i < (len = roots.length)); ++i) { roots[i].root = false; roots[i]._runSource(); }`
+      tails = Outlet.tails
+      `
+      var j = 0, lenTail = 0, i = 0, len = 0;
+      for (;;) {
+        for (; (i < len) || (i < (len = roots.length)); ++i) { roots[i].root = false; roots[i]._runSource(); }
+        if ((j < lenTail) || (j < (lenTail = tails.length))) {
+          tails[j++]();
+        } else {
+          break;
+        }
+      }
+      `
       --roots.depth
       roots.length = 0
+      tails.length = 0
+    return
+
+  @atEnd = (fn) ->
+    if @roots.depth
+      @tails.push fn
+    else
+      fn()
     return
 
   toString: -> @id
